@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -284,20 +285,24 @@ fun ProductsBox(
     ) {
 
         val thumbnail = if (product.images.isNotEmpty()) product.images[0] else ""
-        IconButton(onClick = { viewModel.deleteProduct(product) }) {
-            Icon(imageVector = Icons.Default.Close, contentDescription = "delete Product")
-        }
-        SubcomposeAsyncImage(
-            model = thumbnail,
-            contentDescription = product.name,
-            modifier = Modifier
-                .size(100.dp)
-                .padding(5.dp),
-            loading = {
-                ShimmerEffectBox()
-            },
-            contentScale = ContentScale.Crop
-        )
+       Box(modifier = Modifier.size(100.dp)){
+
+           SubcomposeAsyncImage(
+               model = thumbnail,
+               contentDescription = product.name,
+               modifier = Modifier
+                   .fillMaxWidth().clip(RoundedCornerShape(10.dp))
+                   ,
+               loading = {
+                   ShimmerEffectBox()
+               },
+               contentScale = ContentScale.Crop
+           )
+           IconButton(onClick = { viewModel.deleteProduct(product) }, modifier = Modifier.align(
+               Alignment.TopEnd).size(20.dp),colors = IconButtonDefaults.iconButtonColors(MaterialTheme.colorScheme.secondary.copy(.5f))) {
+               Icon(imageVector = Icons.Default.Close, contentDescription = "delete Product", tint = MaterialTheme.colorScheme.onSecondary)
+           }
+       }
 
         Text(
             text = product.name.capitalize(Locale.ROOT),

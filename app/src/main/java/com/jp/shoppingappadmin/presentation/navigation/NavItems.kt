@@ -25,3 +25,6 @@ object Category
 @Serializable
 object Order
 
+@Serializable
+class ProductDetail(var id: String)
+

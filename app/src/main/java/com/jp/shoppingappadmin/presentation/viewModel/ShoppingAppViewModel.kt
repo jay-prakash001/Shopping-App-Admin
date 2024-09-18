@@ -8,7 +8,9 @@ import com.jp.shoppingappadmin.common.IMAGES
 import com.jp.shoppingappadmin.common.ResultState
 import com.jp.shoppingappadmin.domain.model.Banner
 import com.jp.shoppingappadmin.domain.model.CategoryModel
+import com.jp.shoppingappadmin.domain.model.OrderParentModel
 import com.jp.shoppingappadmin.domain.model.ProductModel
+import com.jp.shoppingappadmin.domain.model.User
 import com.jp.shoppingappadmin.domain.repo.ShoppingAppRepo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,12 +37,84 @@ class ShoppingAppViewModel @Inject constructor(private val shoppingAppRepo: Shop
     val banners = MutableStateFlow(emptyList<Banner>())
     private val _bannerState = MutableStateFlow<BannerState>(BannerState())
     val bannerState = _bannerState.asStateFlow()
+    private val _userState = MutableStateFlow(UserState())
 
-init {
-    getCategories()
+    val userState = _userState.asStateFlow()
+    val users = MutableStateFlow<List<User>>(emptyList())
 
-    println("CAT ${categories.value}")
-}
+    private val _orderState = MutableStateFlow(State())
+
+    val orderState = _orderState.asStateFlow()
+    val orders = MutableStateFlow<List<OrderParentModel>>(emptyList())
+
+
+    init {
+        getCategories()
+        getUsers()
+    }
+
+
+    fun getUsers() {
+        viewModelScope.launch {
+            shoppingAppRepo.getUsers().collectLatest {
+                when (it) {
+                    is ResultState.Error -> {
+                    _userState.value = UserState(error = it.exception)
+
+                    }
+
+                    ResultState.Loading -> {
+                        _userState.value = UserState(isLoading = true)
+                    }
+                    is ResultState.Success -> {
+                        _userState.value =UserState(data =  it.data.toString())
+                        users.value = it.data
+                    }
+                }
+            }
+        }
+    }
+
+    fun getOrders(email : String) {
+        viewModelScope.launch {
+            shoppingAppRepo.getOrders(email = email).collectLatest {
+                when(it){
+                    is ResultState.Error -> {
+                        _orderState.value = State(error = it.exception)
+                    }
+                    ResultState.Loading -> {
+
+                        _orderState.value = State(isLoading =  true)
+                    }
+                    is ResultState.Success -> {
+
+                        _orderState.value = State(data = it.data.toString())
+                        orders.value = it.data
+                    }
+                }
+            }
+        }
+    }
+
+    fun updateOrder(email: String,orderParentModel: OrderParentModel,statusValue : String){
+        viewModelScope.launch {
+            shoppingAppRepo.updateOrder(email = email, orderParentModel = orderParentModel, statusValue = statusValue).collectLatest {
+                when(it){
+                    is ResultState.Error -> {
+
+
+                    }
+                    ResultState.Loading -> {
+
+                    }
+                    is ResultState.Success -> {
+                        getOrders(email = email)
+                    }
+                }
+            }
+        }
+
+    }
     fun updateAlertDialogState() {
         _showAlertDialog.value = !_showAlertDialog.value
     }
@@ -404,3 +478,19 @@ data class BannerState(
     var error: String = ""
 
 )
+
+
+data class UserState(
+    var data: String = "",
+    var isLoading: Boolean = false,
+    var error: String = ""
+
+)
+data class State(
+    var data: String = "",
+    var isLoading: Boolean = false,
+    var error: String = ""
+
+)
+
+

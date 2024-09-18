@@ -26,17 +26,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import com.jp.shoppingappadmin.common.NavigationItem
 import com.jp.shoppingappadmin.presentation.screens.AddProductsScreen
 import com.jp.shoppingappadmin.presentation.screens.CategoryScreen
 import com.jp.shoppingappadmin.presentation.screens.DashBoardScreen
+import com.jp.shoppingappadmin.presentation.screens.UserOrderScreen
 import com.jp.shoppingappadmin.ui.theme.cyan
 import java.util.Locale
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun App(modifier: Modifier = Modifier, navController: NavController) {
+fun App(modifier: Modifier = Modifier, navController: NavHostController) {
     val selectedIndex = remember {
         mutableIntStateOf(0)
     }
@@ -45,7 +46,7 @@ fun App(modifier: Modifier = Modifier, navController: NavController) {
         NavigationItem("Category", Icons.Default.Category),
         NavigationItem("Notifications", Icons.Default.Notifications),
         NavigationItem("Product", Icons.Default.Add),
-        NavigationItem("Order", Icons.Default.ShoppingCart)
+        NavigationItem("Orders ", Icons.Default.ShoppingCart)
     )
 
     Scaffold(
@@ -65,7 +66,6 @@ fun App(modifier: Modifier = Modifier, navController: NavController) {
                             bottomStart = 30.dp
                         )
                     ),
-//                containerColor = Color.Transparent,// Use transparent color to handle custom background
             ) {
                 navList.forEachIndexed { index, navigationItem ->
                     NavigationBarItem(
@@ -117,7 +117,7 @@ fun App(modifier: Modifier = Modifier, navController: NavController) {
                 }
 
                 4 -> {
-                    Text(text = "orders")
+                    UserOrderScreen(navController = navController)
                 }
             }
 

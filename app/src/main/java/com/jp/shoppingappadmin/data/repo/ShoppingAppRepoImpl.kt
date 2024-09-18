@@ -2,21 +2,32 @@ package com.jp.shoppingappadmin.data.repo
 
 import android.annotation.SuppressLint
 import android.net.Uri
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.QuerySnapshot
+import com.google.firebase.firestore.toObject
 import com.google.firebase.storage.FirebaseStorage
 import com.jp.shoppingappadmin.common.BANNER_COLLECTION
 import com.jp.shoppingappadmin.common.CATEGORY
 import com.jp.shoppingappadmin.common.CATEGORY_COLLECTION
+import com.jp.shoppingappadmin.common.EMAIL
 import com.jp.shoppingappadmin.common.ID
 import com.jp.shoppingappadmin.common.IMAGES
 import com.jp.shoppingappadmin.common.NAME
+import com.jp.shoppingappadmin.common.ORDER_COLLECTION
 import com.jp.shoppingappadmin.common.PRODUCT_COLLECTION
 import com.jp.shoppingappadmin.common.ResultState
+import com.jp.shoppingappadmin.common.USER_COLLECTION
 import com.jp.shoppingappadmin.domain.model.Banner
 import com.jp.shoppingappadmin.domain.model.CategoryModel
+import com.jp.shoppingappadmin.domain.model.OrderParentModel
 import com.jp.shoppingappadmin.domain.model.ProductModel
+import com.jp.shoppingappadmin.domain.model.User
 import com.jp.shoppingappadmin.domain.repo.ShoppingAppRepo
+import com.jp.shoppingappadmin.presentation.utils.getRef
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -137,8 +148,8 @@ class ShoppingAppRepoImpl @Inject constructor(
                 }
 
             }.addOnFailureListener {
-            trySend(ResultState.Error(it.localizedMessage))
-        }
+                trySend(ResultState.Error(it.localizedMessage))
+            }
         awaitClose { close() }
     }
 
@@ -162,6 +173,103 @@ class ShoppingAppRepoImpl @Inject constructor(
         }
 
     }
+
+    override suspend fun getUsers(): Flow<ResultState<List<User>>> = callbackFlow {
+        trySend(ResultState.Loading)
+
+        firestore.collection(USER_COLLECTION).get().addOnSuccessListener { querySnapShot ->
+            if (!querySnapShot.isEmpty) {
+
+                val users = mutableListOf<User>()
+                querySnapShot.forEach {
+                    val doc = it.toObject(User::class.java)
+                    println(doc)
+                    users.add(doc)
+                }
+                trySend(ResultState.Success(users))
+            } else {
+                trySend(ResultState.Error("Empty List"))
+            }
+        }.addOnFailureListener {
+            trySend(ResultState.Error(it.localizedMessage))
+        }
+        awaitClose {
+            close()
+        }
+    }
+
+    override suspend fun getOrders(email: String): Flow<ResultState<List<OrderParentModel>>> =
+        callbackFlow {
+            trySend(ResultState.Loading)
+            var node by mutableStateOf("")
+            firestore.collection(USER_COLLECTION)
+                .whereEqualTo(EMAIL, email)
+                .get()
+                .addOnSuccessListener { querySnapshot ->
+                    if (!querySnapshot.isEmpty) {
+
+                        node = querySnapshot.documents[0].id
+
+                        firestore.collection(USER_COLLECTION).document(node)
+                            .collection(ORDER_COLLECTION)
+                            .get().addOnSuccessListener { query ->
+
+                                val orders = query.toObjects(OrderParentModel::class.java)
+
+                                trySend(ResultState.Success(orders))
+                                println("RES00 $node \n orders $orders")
+                            }
+                            .addOnFailureListener {
+                                trySend(ResultState.Error(it.localizedMessage))
+                            }
+
+
+                    } else {
+                        trySend(ResultState.Error("User not found"))
+                    }
+                }.addOnFailureListener {
+                    trySend(ResultState.Error(it.localizedMessage))
+                }
+
+
+            awaitClose { close() }
+        }
+
+    override suspend fun updateOrder(
+        email: String,
+        orderParentModel: OrderParentModel,
+        statusValue: String
+    ): Flow<ResultState<List<OrderParentModel>>> =
+        callbackFlow {
+            trySend(ResultState.Loading)
+
+            firestore.collection(USER_COLLECTION).whereEqualTo(EMAIL, email).get()
+                .addOnSuccessListener {
+                    if (!it.isEmpty) {
+                        val node = it.documents[0].id
+                        firestore.collection(USER_COLLECTION).document(node)
+                            .collection(ORDER_COLLECTION).whereEqualTo(ID, orderParentModel.id)
+                            .get().addOnSuccessListener {
+                                val document =  it.documents[0].reference
+
+                                println("Update ${it.documents[0]}")
+                                val listOfStatus = mutableListOf<String>()
+
+                                orderParentModel.status.forEach { status ->
+                                    listOfStatus.add(status)
+                                }
+                                listOfStatus.add(statusValue)
+
+                                document.update("status", listOfStatus)
+                            }.addOnFailureListener {
+                                trySend(ResultState.Error(it.localizedMessage))
+                            }
+                    }
+                }.addOnFailureListener {
+                    trySend(ResultState.Error(it.localizedMessage))
+                }
+            awaitClose { close() }
+        }
 
 
     override suspend fun addProduct(product: ProductModel): Flow<ResultState<String>> =
@@ -197,26 +305,28 @@ class ShoppingAppRepoImpl @Inject constructor(
         }
     }
 
-    override suspend fun deleteProduct(product: ProductModel): Flow<ResultState<String>> = callbackFlow {
-        trySend(ResultState.Loading)
-        firestore.collection(PRODUCT_COLLECTION).whereEqualTo(ID, product.id).get().addOnSuccessListener {querySnapshot->
-            if (!querySnapshot.isEmpty){
-                val document = querySnapshot.documents[0]
-                document.reference.delete().addOnSuccessListener {
-                    trySend(ResultState.Success("Successfully deleted"))
-                    }.addOnFailureListener {
-                        trySend(ResultState.Error(it.localizedMessage))
+    override suspend fun deleteProduct(product: ProductModel): Flow<ResultState<String>> =
+        callbackFlow {
+            trySend(ResultState.Loading)
+            firestore.collection(PRODUCT_COLLECTION).whereEqualTo(ID, product.id).get()
+                .addOnSuccessListener { querySnapshot ->
+                    if (!querySnapshot.isEmpty) {
+                        val document = querySnapshot.documents[0]
+                        document.reference.delete().addOnSuccessListener {
+                            trySend(ResultState.Success("Successfully deleted"))
+                        }.addOnFailureListener {
+                            trySend(ResultState.Error(it.localizedMessage))
+                        }
+                    } else {
+                        trySend(ResultState.Error("Product Not Found."))
                     }
-            }else {
-                trySend(ResultState.Error("Product Not Found."))
+                }.addOnFailureListener {
+                    trySend(ResultState.Error(it.localizedMessage))
+                }
+            awaitClose {
+                close()
             }
-        }.addOnFailureListener {
-            trySend(ResultState.Error(it.localizedMessage))
         }
-        awaitClose {
-            close()
-        }
-    }
 
     override fun searchProducts(name: String): Flow<ResultState<List<ProductModel>>> =
         callbackFlow {

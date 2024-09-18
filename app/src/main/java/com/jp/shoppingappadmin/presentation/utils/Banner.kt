@@ -33,12 +33,14 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -437,15 +439,7 @@ fun BannerCard(
         colors = CardDefaults.cardColors(randomColor),
         elevation = CardDefaults.elevatedCardElevation(1.dp)
     ) {
-        Row(
-            Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top,
-            horizontalArrangement = Arrangement.End
-        ) {
-            IconButton(onClick = { viewModel.deleteBanner(banner) }) {
-                Icon(imageVector = Icons.Default.Close, contentDescription = "deleteBanner")
-            }
-        }
+
         Row(
             modifier = Modifier
                 .padding(10.dp)
@@ -468,23 +462,33 @@ fun BannerCard(
                 )
 
             }
+            Box(modifier = Modifier) {
 
-            SubcomposeAsyncImage(
-                model = banner.img, contentDescription = "Banner Image", modifier = Modifier
-                    .size(200.dp)
-                    .clip(
-                        RoundedCornerShape(10.dp)
-                    ), contentScale = ContentScale.Crop, loading = {
-                    Image(
-                        painter = painterResource(id = R.drawable.app),
-                        contentDescription = "banner img",
-                        modifier = Modifier
-                            .size(200.dp)
-                            .clip(
-                                RoundedCornerShape(10.dp)
-                            )
-                    )
-                })
+                SubcomposeAsyncImage(
+                    model = banner.img, contentDescription = "Banner Image", modifier = Modifier
+                        .size(200.dp)
+                        .clip(
+                            RoundedCornerShape(10.dp)
+                        ), contentScale = ContentScale.Crop, loading = {
+                        Image(
+                            painter = painterResource(id = R.drawable.app),
+                            contentDescription = "banner img",
+                            modifier = Modifier
+                                .size(200.dp)
+                                .clip(
+                                    RoundedCornerShape(10.dp)
+                                )
+                        )
+                    })
+
+                IconButton(
+                    onClick = { viewModel.deleteBanner(banner) },
+                    modifier = Modifier.align(Alignment.TopEnd),
+                    colors = IconButtonDefaults.iconButtonColors(MaterialTheme.colorScheme.secondary.copy(.5f))
+                ) {
+                    Icon(imageVector = Icons.Default.Delete, contentDescription = "deleteBanner", tint = MaterialTheme.colorScheme.onSecondary)
+                }
+            }
 
         }
     }
